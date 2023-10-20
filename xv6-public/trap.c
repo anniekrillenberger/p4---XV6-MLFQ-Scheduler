@@ -46,6 +46,7 @@ trap(struct trapframe *tf)
     return;
   }
 
+  // TIMER INTERRUPTS
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){
@@ -102,6 +103,7 @@ trap(struct trapframe *tf)
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
+  // THIS ONE IS IMPORTANT TO US !!
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER)
     yield();

@@ -326,15 +326,16 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   
-  for(;;){
+  for(;;) {
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    // LOOK THROUGH PROC STRUCTURES TO PICK A PROCESS TO RUN, THEN RUN!
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
-        continue;
+        continue; // GO TO NEXT ITERATION OF THE LOOP
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -342,8 +343,12 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      cprintf("about to run: %s [pid %d]\n", p->name, p->pid);
 
+      // SAVE REGS OF CURRENT RUNNING PROCESS & GET REGS FOR ABOUT TO RUN PROCESS
+      // SWITCHES TO THAT PROCESS' KERNEL STACK -- RUNNING IN COMPLETELY DIFFERENT CONTEXT
       swtch(&(c->scheduler), p->context);
+      // CONTINUE RUNNING SCHEDULER AFTER HAVING RUN A JOB FOR SOME TIME
       switchkvm();
 
       // Process is done running for now.
@@ -352,7 +357,7 @@ scheduler(void)
     }
     release(&ptable.lock);
 
-  }
+  } // infinite loop ends
 }
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -377,6 +382,7 @@ sched(void)
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
+  // SAVE REGS INTO CONTEXT, SWITCH KERNAL STACKS, RETURN INTO SCHEDULER :)
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
 }
@@ -386,7 +392,7 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
-  myproc()->state = RUNNABLE;
+  myproc()->state = RUNNABLE;   // CHANGING FROM RUNNING
   sched();
   release(&ptable.lock);
 }
