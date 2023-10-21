@@ -1,12 +1,10 @@
+#include "types.h"
+#include "stat.h"
+#include "user.h"
 
-/**
- * nice() should set the current process's nice value to
- * n and return the previous nice value, or -1 on error. 
-*/
-int main(int argc, char *argv[]) 
-{
-    int niceVal;
-    int prevNiceVal;
-    niceVal = nice(prevNiceVal);
+int main(int argc, char *argv[])  {
+    int n = 0;
+    printf(1, "nice: %d\n", nice(n));
 
+    return 0;
 } 

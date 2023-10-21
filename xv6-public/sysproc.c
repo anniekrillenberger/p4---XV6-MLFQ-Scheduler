@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "psched.h"
 
 int
 sys_fork(void)
@@ -88,4 +89,19 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+int sys_nice(void) {
+  uint num;
+  num = 0;  
+  return num;
+}
+
+// fill in the structure pschedinfo
+int sys_getschedstate(void) { 
+  struct pschedinfo* pi;
+  if (argptr(0, (void*)&pi, sizeof(struct pschedinfo)) < 0) {
+    return -1;
+  }
+  return 0;
 }
