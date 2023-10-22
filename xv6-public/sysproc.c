@@ -91,13 +91,29 @@ sys_uptime(void)
   return xticks;
 }
 
+// set current process's nice value to niceVal and return previous nice value
 int sys_nice(void) {
-  uint num;
-  num = 0;  
-  return num;
+  int niceVal;
+
+  // error handling for invalid argument
+  if(argint(0, &niceVal) < 0 || niceVal < 0 || niceVal > 20) return -1;
+
+  // get current process & sched object
+  struct proc *curproc = myproc();
+  // struct pschedinfo *cursched = curproc->sched;
+
+  // store old nice value
+  int oldNiceVal = curproc->sched->nice[0];
+
+  // set new nice value
+  curproc->sched->nice[0] = niceVal;
+
+  // return old niceVal
+  return oldNiceVal;
 }
 
 // fill in the structure pschedinfo
+// run through all the processes and update the values of the struct pschedinfo for those processes
 int sys_getschedstate(void) { 
   struct pschedinfo* pi;
   if (argptr(0, (void*)&pi, sizeof(struct pschedinfo)) < 0) {

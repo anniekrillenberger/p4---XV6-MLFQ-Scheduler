@@ -13,6 +13,7 @@ struct {
 } ptable;
 
 static struct proc *initproc;
+static struct pschedinfo *initSched;
 
 int nextpid = 1;
 extern void forkret(void);
@@ -325,6 +326,10 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+
+  // initialize sched struct
+  initSched->nice[0] = 0;
+  initSched->priority[0] = 0;
   
   for(;;) {
     // Enable interrupts on this processor.
@@ -343,7 +348,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      cprintf("about to run: %s [pid %d]\n", p->name, p->pid);
+      // cprintf("about to run: %s [pid %d]\n", p->name, p->pid);
 
       // SAVE REGS OF CURRENT RUNNING PROCESS & GET REGS FOR ABOUT TO RUN PROCESS
       // SWITCHES TO THAT PROCESS' KERNEL STACK -- RUNNING IN COMPLETELY DIFFERENT CONTEXT
