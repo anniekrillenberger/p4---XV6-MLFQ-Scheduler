@@ -1,3 +1,5 @@
+#include "psched.h"
+
 struct buf;
 struct context;
 struct file;
@@ -120,6 +122,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             getschedstate(struct pschedinfo* pi);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

@@ -13,7 +13,6 @@ struct {
 } ptable;
 
 static struct proc *initproc;
-static struct pschedinfo *initSched;
 
 int nextpid = 1;
 extern void forkret(void);
@@ -312,6 +311,26 @@ wait(void)
   }
 }
 
+int getschedstate(struct pschedinfo* pi) {
+
+  int i= 0;
+  for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == UNUSED) {
+      pi->inuse[i] = 0;
+    } else {
+      pi->inuse[i] = 1;
+    }
+
+    pi->priority[i] = p->priority;
+    pi->nice[i] = p->nice;
+    pi->pid[i] = p->pid;
+    pi-> ticks[i] = p->totalTicks;
+
+    i++;
+  }
+  return 0;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -326,10 +345,6 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-
-  // initialize sched struct
-  initSched->nice[0] = 0;
-  initSched->priority[0] = 0;
   
   for(;;) {
     // Enable interrupts on this processor.

@@ -100,24 +100,26 @@ int sys_nice(void) {
 
   // get current process & sched object
   struct proc *curproc = myproc();
-  // struct pschedinfo *cursched = curproc->sched;
 
   // store old nice value
-  int oldNiceVal = curproc->sched->nice[0];
+  int oldNice = curproc->nice;
 
   // set new nice value
-  curproc->sched->nice[0] = niceVal;
+  curproc->nice = niceVal;
 
   // return old niceVal
-  return oldNiceVal;
+  return oldNice;
 }
 
 // fill in the structure pschedinfo
 // run through all the processes and update the values of the struct pschedinfo for those processes
 int sys_getschedstate(void) { 
   struct pschedinfo* pi;
+
+  // error hanlding
   if (argptr(0, (void*)&pi, sizeof(struct pschedinfo)) < 0) {
     return -1;
   }
-  return 0;
+
+  return getschedstate(pi);
 }
