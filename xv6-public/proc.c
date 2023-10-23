@@ -176,7 +176,7 @@ growproc(int n)
 
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
-// Caller must set state of returned proc to RUNNABLE.
+// Caller must set state of Create returned proc to RUNNABLE.
 int
 fork(void)
 {
@@ -199,6 +199,11 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+
+  // initialize scheduler 
+  np->nice = 0;
+  np->priority = 0; // start with highest priority
+  np->cpuUse = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -311,6 +316,7 @@ wait(void)
   }
 }
 
+// run through all the processes and update the values of the struct pschedinfo for those processes
 int getschedstate(struct pschedinfo* pi) {
 
   int i= 0;
@@ -324,7 +330,7 @@ int getschedstate(struct pschedinfo* pi) {
     pi->priority[i] = p->priority;
     pi->nice[i] = p->nice;
     pi->pid[i] = p->pid;
-    pi-> ticks[i] = p->totalTicks;
+    pi-> ticks[i] = p->ticks;
 
     i++;
   }
@@ -353,7 +359,13 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     // LOOK THROUGH PROC STRUCTURES TO PICK A PROCESS TO RUN, THEN RUN!
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      // decide priority
+      p->cpuUse = p->cpuUse / 2;
+      p->priority = p->cpuUse / 2 + p->nice;
+
+
+
       if(p->state != RUNNABLE)
         continue; // GO TO NEXT ITERATION OF THE LOOP
 
@@ -363,7 +375,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      // cprintf("about to run: %s [pid %d]\n", p->name, p->pid);
+      p->cpuUse++;
 
       // SAVE REGS OF CURRENT RUNNING PROCESS & GET REGS FOR ABOUT TO RUN PROCESS
       // SWITCHES TO THAT PROCESS' KERNEL STACK -- RUNNING IN COMPLETELY DIFFERENT CONTEXT
@@ -377,7 +389,7 @@ scheduler(void)
     }
     release(&ptable.lock);
 
-  } // infinite loop ends
+  } // infinite loop ends (or does it)
 }
 
 // Enter scheduler.  Must hold only ptable.lock

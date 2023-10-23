@@ -7,6 +7,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "psched.h"
+#include "stddef.h"
 
 int
 sys_fork(void)
@@ -112,12 +113,14 @@ int sys_nice(void) {
 }
 
 // fill in the structure pschedinfo
-// run through all the processes and update the values of the struct pschedinfo for those processes
 int sys_getschedstate(void) { 
   struct pschedinfo* pi;
 
   // error hanlding
   if (argptr(0, (void*)&pi, sizeof(struct pschedinfo)) < 0) {
+    return -1;
+  }
+  if(pi == NULL) {
     return -1;
   }
 
