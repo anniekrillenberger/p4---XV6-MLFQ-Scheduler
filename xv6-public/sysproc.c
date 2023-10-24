@@ -68,15 +68,19 @@ sys_sleep(void)
     return -1;
   acquire(&tickslock);
   ticks0 = ticks;     // ticks -- curr val of sys timer
-  struct proc *p = myproc();
-  p->sleepTicks = n;
-  while(ticks - ticks0 < n){
+  while(ticks - ticks0 < n ) { //&& myproc()->isSleeping == 0){
     if(myproc()->killed){
       release(&tickslock);
       return -1;
     }
     sleep(&ticks, &tickslock);
+    // myproc()->isSleeping = 1;   // ADDED CODE
+    
   }
+
+  // ADDED CODE
+  // myproc()->isSleeping = 0;
+
   release(&tickslock);
   return 0;
 }

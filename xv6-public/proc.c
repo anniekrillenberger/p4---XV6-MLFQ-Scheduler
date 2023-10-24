@@ -351,6 +351,7 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+  int isRunnable = 1;
   
   for(;;) { // this could theoretically run more than once per tick (if it doesn't find a runnable process):)
     // Enable interrupts on this processor.
@@ -360,8 +361,8 @@ scheduler(void)
     acquire(&ptable.lock);
 
     // cprintf("lock acquired\n");
-
-    if(ticks % 100 == 0) { // need flag to check if already updated
+    // isRunnable = 0;
+    if(ticks % 100 == 0 && isRunnable) { // need flag to check if already updated
       // cprintf("ticks mod 100\n");
       // LOOK THROUGH PROC STRUCTURES TO PICK A PROCESS TO RUN
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
@@ -382,6 +383,9 @@ scheduler(void)
         continue; // GO TO NEXT ITERATION OF THE LOOP
       }
 
+      // we have at least one runnable process
+      isRunnable = 1;
+
       if(p->priority < minVal) { // new high priority
         // assign it as next to run 
         // cnt = 0;
@@ -395,7 +399,8 @@ scheduler(void)
     // minVal never set
     if(minVal != 64) {
 
-    // cprintf("about to run\n");
+
+      // cprintf("about to run\n");
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -416,6 +421,8 @@ scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+    } else {
+      isRunnable = 0;
     }
 
     release(&ptable.lock);
