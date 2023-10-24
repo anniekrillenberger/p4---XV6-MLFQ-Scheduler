@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "memory": "c",
+        "semaphore": "c",
+        "stop_token": "c"
+    }
+}

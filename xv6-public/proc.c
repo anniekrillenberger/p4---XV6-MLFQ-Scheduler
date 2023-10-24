@@ -352,34 +352,64 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   
-  for(;;) {
+  for(;;) { // this could theoretically run more than once per tick (if it doesn't find a runnable process):)
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    // LOOK THROUGH PROC STRUCTURES TO PICK A PROCESS TO RUN, THEN RUN!
+
+    // cprintf("lock acquired\n");
+
+    if(ticks % 100 == 0) { // need flag to check if already updated
+      // cprintf("ticks mod 100\n");
+      // LOOK THROUGH PROC STRUCTURES TO PICK A PROCESS TO RUN
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        // decide priority
+        p->cpuUse = p->cpuUse / 2;
+        p->priority = p->cpuUse / 2 + p->nice;
+      } // end of for loop to decide priority
+    } // end of if ticks%100
+
+    // get highest (lowest val) priority
+    int minVal = 64; // max priority val = 20?
+    struct proc *toRun[64];
+    // int cnt = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-      // decide priority
-      p->cpuUse = p->cpuUse / 2;
-      p->priority = p->cpuUse / 2 + p->nice;
 
-
-
-      if(p->state != RUNNABLE)
+      if(p->state != RUNNABLE) {
+        // cprintf("process not runnable\n");
         continue; // GO TO NEXT ITERATION OF THE LOOP
+      }
+
+      if(p->priority < minVal) { // new high priority
+        // assign it as next to run 
+        // cnt = 0;
+        minVal = p->priority;
+        toRun[0] = p;
+      } // RR -- each process runs for a tick
+    }
+
+    // cprintf("minVal: %d\n", minVal);
+
+    // minVal never set
+    if(minVal != 64) {
+
+    // cprintf("about to run\n");
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      p->cpuUse++;
+      // cprintf("process to run: %s\n", toRun[0]->name);
+      c->proc = toRun[0];
+      switchuvm(toRun[0]);
+      toRun[0]->state = RUNNING;
+      toRun[0]->cpuUse++;
+      
 
       // SAVE REGS OF CURRENT RUNNING PROCESS & GET REGS FOR ABOUT TO RUN PROCESS
       // SWITCHES TO THAT PROCESS' KERNEL STACK -- RUNNING IN COMPLETELY DIFFERENT CONTEXT
-      swtch(&(c->scheduler), p->context);
+      swtch(&(c->scheduler), toRun[0]->context);
       // CONTINUE RUNNING SCHEDULER AFTER HAVING RUN A JOB FOR SOME TIME
       switchkvm();
 
@@ -387,6 +417,7 @@ scheduler(void)
       // It should have changed its p->state before coming back.
       c->proc = 0;
     }
+
     release(&ptable.lock);
 
   } // infinite loop ends (or does it)
@@ -455,12 +486,20 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
+
+  // TA notes: sys_sleep: n is how long it should sleep
+  // ticks0 is global ticks
+  // calc what tick it should wake up using n & ticks0
+  // dont want sleeping to every be runnable -- check if done sleeping then set state to runnable
+  // while loop is when it changes
+  // flag inside the while loop
+
   struct proc *p = myproc();
   
-  if(p == 0)
+  if(p == 0) // checks if p is null
     panic("sleep");
 
-  if(lk == 0)
+  if(lk == 0) // checks if lk is null
     panic("sleep without lk");
 
   // Must acquire ptable.lock in order to
@@ -473,6 +512,7 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
+
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;

@@ -61,13 +61,15 @@ sys_sbrk(void)
 int
 sys_sleep(void)
 {
-  int n;
-  uint ticks0;
+  int n;        // sleep duration in ticks
+  uint ticks0;  // initial value of system timer
 
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
-  ticks0 = ticks;
+  ticks0 = ticks;     // ticks -- curr val of sys timer
+  struct proc *p = myproc();
+  p->sleepTicks = n;
   while(ticks - ticks0 < n){
     if(myproc()->killed){
       release(&tickslock);

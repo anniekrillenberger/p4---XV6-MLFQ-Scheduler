@@ -12,6 +12,8 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
+extern uint ticks;
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
