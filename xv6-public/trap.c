@@ -55,7 +55,6 @@ trap(struct trapframe *tf)
       ticks++;
       // only do this when the process is done sleeping
       wakeup(&ticks);
-
       release(&tickslock);
     }
     lapiceoi();

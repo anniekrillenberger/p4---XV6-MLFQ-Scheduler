@@ -62,24 +62,27 @@ int
 sys_sleep(void)
 {
   int n;        // sleep duration in ticks
-  uint ticks0;  // initial value of system timer
+  // uint ticks0;  // initial value of system timer
 
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
-  ticks0 = ticks;     // ticks -- curr val of sys timer
-  while(ticks - ticks0 < n ) { //&& myproc()->isSleeping == 0){
+  // ticks0 = ticks;     // ticks -- curr val of sys timer
+  // while(ticks - ticks0 < n) {
     if(myproc()->killed){
       release(&tickslock);
       return -1;
     }
-    sleep(&ticks, &tickslock);
-    // myproc()->isSleeping = 1;   // ADDED CODE
+
+    int sleepTime = ticks + n;
+
+    myproc()->isSleeping = 1;   // ADDED CODE
+    sleep(&sleepTime, &tickslock);
     
-  }
+  // }
 
   // ADDED CODE
-  // myproc()->isSleeping = 0;
+  myproc()->isSleeping = 0;
 
   release(&tickslock);
   return 0;

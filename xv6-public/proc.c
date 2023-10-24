@@ -204,6 +204,7 @@ fork(void)
   np->nice = 0;
   np->priority = 0; // start with highest priority
   np->cpuUse = 0;
+  np->isSleeping = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -351,7 +352,8 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  int isRunnable = 1;
+  int ticks0 = ticks;
+  // int isRunnable = 1;
   
   for(;;) { // this could theoretically run more than once per tick (if it doesn't find a runnable process):)
     // Enable interrupts on this processor.
@@ -359,70 +361,63 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-
-    // cprintf("lock acquired\n");
-    // isRunnable = 0;
-    if(ticks % 100 == 0 && isRunnable) { // need flag to check if already updated
-      // cprintf("ticks mod 100\n");
+    if(ticks - ticks0 > 100) { 
+      ticks0 = ticks;
+      
       // LOOK THROUGH PROC STRUCTURES TO PICK A PROCESS TO RUN
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
         // decide priority
         p->cpuUse = p->cpuUse / 2;
-        p->priority = p->cpuUse / 2 + p->nice;
-      } // end of for loop to decide priority
+        p->priority = (p->cpuUse / 2) + p->nice;
+      } // end of for loop to recalc priority
     } // end of if ticks%100
 
-    // get highest (lowest val) priority
-    int minVal = 64; // max priority val = 20?
-    struct proc *toRun[64];
-    // int cnt = 0;
+
+    // find high priority
+    int minVal = __INT_MAX__; // max priority val = 20?
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
 
       if(p->state != RUNNABLE) {
-        // cprintf("process not runnable\n");
         continue; // GO TO NEXT ITERATION OF THE LOOP
       }
 
-      // we have at least one runnable process
-      isRunnable = 1;
-
+      // get highest (lowest val) priority
       if(p->priority < minVal) { // new high priority
         // assign it as next to run 
-        // cnt = 0;
         minVal = p->priority;
-        toRun[0] = p;
-      } // RR -- each process runs for a tick
+      }
     }
 
-    // cprintf("minVal: %d\n", minVal);
 
-    // minVal never set
-    if(minVal != 64) {
+    // cprintf("minval: %d\n", minVal);
 
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
 
-      // cprintf("about to run\n");
+      if(p->state != RUNNABLE) {
+        continue; // GO TO NEXT ITERATION OF THE LOOP
+      }
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      // cprintf("process to run: %s\n", toRun[0]->name);
-      c->proc = toRun[0];
-      switchuvm(toRun[0]);
-      toRun[0]->state = RUNNING;
-      toRun[0]->cpuUse++;
-      
+      if(minVal != 64 && p->priority == minVal) {
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        // cprintf("process to run: %s\n", toRun[0]->name);
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        p->cpuUse++;
+        p->ticks++;
 
-      // SAVE REGS OF CURRENT RUNNING PROCESS & GET REGS FOR ABOUT TO RUN PROCESS
-      // SWITCHES TO THAT PROCESS' KERNEL STACK -- RUNNING IN COMPLETELY DIFFERENT CONTEXT
-      swtch(&(c->scheduler), toRun[0]->context);
-      // CONTINUE RUNNING SCHEDULER AFTER HAVING RUN A JOB FOR SOME TIME
-      switchkvm();
+        // SAVE REGS OF CURRENT RUNNING PROCESS & GET REGS FOR ABOUT TO RUN PROCESS
+        // SWITCHES TO THAT PROCESS' KERNEL STACK -- RUNNING IN COMPLETELY DIFFERENT CONTEXT
+        swtch(&(c->scheduler), p->context);
+        // CONTINUE RUNNING SCHEDULER AFTER HAVING RUN A JOB FOR SOME TIME
+        switchkvm();
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
-    } else {
-      isRunnable = 0;
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
     }
 
     release(&ptable.lock);
@@ -523,6 +518,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  p->isSleeping = 1;
 
   sched();
 
@@ -544,9 +540,11 @@ wakeup1(void *chan)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == SLEEPING && *(int*)p->chan == *(int*)chan) {
       p->state = RUNNABLE;
+    } 
+  }
 }
 
 // Wake up all processes sleeping on chan.
